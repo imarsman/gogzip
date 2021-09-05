@@ -190,6 +190,9 @@ func main() {
 	var test bool
 	flag.BoolVar(&test, "t", false, "test compressed file integrity")
 
+	var keep bool
+	flag.BoolVar(&keep, "k", false, "keep original file")
+
 	flag.BoolVar(&decompress, "d", false, "decompress input")
 	flag.BoolVar(&decompress, "decompress", false, "decompress input")
 
@@ -197,15 +200,42 @@ func main() {
 
 	flag.Parse()
 
-	files := flag.Args()
+	paths := flag.Args()
 
 	if helpFlag {
 		printHelp(os.Stdout)
 	}
 
-	for i := 0; i < len(files); i++ {
-		fmt.Println(files[i])
+	var goodPaths = make([]string, 0, len(paths))
+
+	for _, path := range paths {
+		if _, err := os.Stat(path); err == nil {
+			// f, err := os.Open(paths[i])
+			// if err != nil {
+			// 	fmt.Println(err)
+			// 	continue
+			// }
+			// files = append(files, f)
+		} else if os.IsNotExist(err) {
+			fmt.Println(err)
+			continue
+		} else {
+			fmt.Println(err)
+			continue
+		}
+		goodPaths = append(goodPaths, path)
+
+		fmt.Println(paths)
 	}
 
-	// printHelp(os.Stdout)
+	// files := make([]*os.File, 0, len(paths))
+	for _, p := range goodPaths {
+		var fname string = p + ".gz"
+		file, err := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		fmt.Println(file.Name())
+	}
 }

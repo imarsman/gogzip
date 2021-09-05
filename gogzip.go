@@ -183,13 +183,29 @@ func main() {
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
 
 	flag.BoolVar(&stdoutFlag, "c", false, "send to standard out")
+	flag.BoolVar(&stdoutFlag, "stdout", false, "send to standard out")
 
-	flag.IntVar(&level, "l", 1, "compression level")
+	flag.IntVar(&level, "l", 6, "compression level")
 
-	flag.BoolVar(&decompress, "c", false, "decompress input")
+	var test bool
+	flag.BoolVar(&test, "t", false, "test compressed file integrity")
+
+	flag.BoolVar(&decompress, "d", false, "decompress input")
+	flag.BoolVar(&decompress, "decompress", false, "decompress input")
 
 	flag.BoolVar(&list, "L", false, "list compression information")
 
 	flag.Parse()
 
+	files := flag.Args()
+
+	if helpFlag {
+		printHelp(os.Stdout)
+	}
+
+	for i := 0; i < len(files); i++ {
+		fmt.Println(files[i])
+	}
+
+	// printHelp(os.Stdout)
 }

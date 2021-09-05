@@ -16,6 +16,7 @@ import (
 var useColour bool = true
 var stdoutFlag bool
 var level int = 6
+var list bool = false
 
 var decompress bool = false
 
@@ -186,6 +187,8 @@ func main() {
 	flag.IntVar(&level, "l", 1, "compression level")
 
 	flag.BoolVar(&decompress, "c", false, "decompress input")
+
+	flag.BoolVar(&list, "L", false, "list compression information")
 
 	flag.Parse()
 

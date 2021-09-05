@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 
@@ -14,6 +15,9 @@ import (
 
 var useColour bool = true
 var stdoutFlag bool
+var level int = 6
+
+var decompress bool = false
 
 const (
 	brightGreen = iota
@@ -23,21 +27,46 @@ const (
 	noColour // Can use to default to no colour output
 )
 
-func decompress(in *os.File, out *os.File, level int) error {
+func isGzipped(in *os.File) (bool, error) {
+	defer in.Close()
+	buff := make([]byte, 512)
+
+	// why 512 bytes ? see http://golang.org/pkg/net/http/#DetectContentType
+
+	_, err := in.Seek(0, io.SeekStart)
+	if err != nil {
+		return false, err
+	}
+	_, err = in.Read(buff)
+	if err != nil {
+		return false, err
+	}
+	_, err = in.Seek(0, io.SeekStart)
+	if err != nil {
+		return false, err
+	}
+
+	filetype := http.DetectContentType(buff)
+
+	switch filetype {
+	case "application/x-gzip", "application/zip":
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
+func gUnzip(in *os.File, out *os.File, level int) (int, error) {
+	var written int
 	buf := make([]byte, 2048)
 	var readWriter *bufio.ReadWriter
 
 	gzipReader, err := gzip.NewReader(in)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	br := bufio.NewReader(gzipReader)
 
-	// gzipWriter := gzip.NewWriter(out)
-	// gzipWriter, err = gzip.NewWriterLevel(gzipWriter, level)
-	// if err != nil {
-	// 	return err
-	// }
 	bw := bufio.NewWriter(out)
 	readWriter = bufio.NewReadWriter(br, bw)
 
@@ -52,28 +81,36 @@ func decompress(in *os.File, out *os.File, level int) error {
 		if n == 0 && err == io.EOF {
 			break
 		}
-		readWriter.Write(buf[0:n])
+		n, err = readWriter.Write(buf[0:n])
+		if err != nil {
+			return 0, err
+		}
+		written += n
+
 		// The write method for fileWriter.write does flush.
 		readWriter.Flush()
 	}
 
-	return nil
+	_, err = in.Seek(0, io.SeekStart)
+	if err != nil {
+		return 0, err
+	}
+
+	return written, nil
 }
 
-func compress(in *os.File, out *os.File, level int) error {
+func gZip(in *os.File, out *os.File, level int) (int, error) {
+	var written int
+
 	buf := make([]byte, 2048)
 	var readWriter *bufio.ReadWriter
 
-	// gzipReader, err := gzip.NewReader(in)
-	// if err != nil {
-	// 	return err
-	// }
 	br := bufio.NewReader(in)
 
 	gzipWriter := gzip.NewWriter(out)
 	gzipWriter, err := gzip.NewWriterLevel(gzipWriter, level)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	bw := bufio.NewWriter(gzipWriter)
 	readWriter = bufio.NewReadWriter(br, bw)
@@ -89,12 +126,18 @@ func compress(in *os.File, out *os.File, level int) error {
 		if n == 0 && err == io.EOF {
 			break
 		}
-		readWriter.Write(buf[0:n])
+		n, err = readWriter.Write(buf[0:n])
+		written += n
 		// The write method for fileWriter.write does flush.
 		readWriter.Flush()
 	}
 
-	return nil
+	_, err = in.Seek(0, io.SeekStart)
+	if err != nil {
+		return 0, err
+	}
+
+	return written, nil
 }
 
 func colour(colour int, input ...string) string {
@@ -133,7 +176,11 @@ func main() {
 	var helpFlag bool
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
 
-	flag.BoolVar(&stdoutFlag, "S", false, "do not forward standard input to standard output")
+	flag.BoolVar(&stdoutFlag, "c", false, "send to standard out")
+
+	flag.IntVar(&level, "l", 1, "compression level")
+
+	flag.BoolVar(&decompress, "c", false, "decompress input")
 
 	flag.Parse()
 

@@ -38,6 +38,15 @@ func runCmd(command string) error {
 	return err
 }
 
+func cleanup() error {
+	err := runCmd("script/reset.sh")
+
+	return err
+}
+
+func TestStart(t *testing.T) {
+	cleanup()
+}
 func TestRunCmd(t *testing.T) {
 	is := is.New(t)
 
@@ -55,8 +64,21 @@ func TestRunCheckFile(t *testing.T) {
 func TestRunGetFile(t *testing.T) {
 	is := is.New(t)
 
-	file, err := getFile("sample/1.txt")
+	file, err := openFile("sample/1.txt")
 	is.NoErr(err)
 	is.True(file != nil)
 	t.Log(file.Name())
+}
+
+func TestCreateFile(t *testing.T) {
+	is := is.New(t)
+
+	file, err := createFile("sample/1.txt.gz")
+	is.NoErr(err)
+	is.True(file != nil)
+	t.Log(file.Name())
+}
+
+func TestEnd(t *testing.T) {
+	cleanup()
 }

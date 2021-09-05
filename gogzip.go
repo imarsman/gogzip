@@ -182,11 +182,20 @@ func checkPath(path string) error {
 	return err
 }
 
-func getFile(path string) (*os.File, error) {
+func openFile(path string) (*os.File, error) {
 	err := checkPath(path)
 	if err != nil {
 		return nil, err
 	}
+	file, err := os.OpenFile(path, os.O_RDWR, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}
+
+func createFile(path string) (*os.File, error) {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err

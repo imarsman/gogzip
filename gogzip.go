@@ -169,6 +169,32 @@ func colour(colour int, input ...string) string {
 	}
 }
 
+func checkPath(path string) error {
+	var err error
+	if _, err = os.Stat(path); err != nil {
+		return err
+	} else if os.IsNotExist(err) {
+		return err
+	} else if err != nil {
+		return err
+	}
+
+	return err
+}
+
+func getFile(path string) (*os.File, error) {
+	err := checkPath(path)
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}
+
 // printHelp print out simple help output
 func printHelp(out *os.File) {
 	fmt.Fprintln(out, colour(brightGreen, os.Args[0], "- a Go version of gzip"))
@@ -209,18 +235,18 @@ func main() {
 	var goodPaths = make([]string, 0, len(paths))
 
 	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
-			// f, err := os.Open(paths[i])
-			// if err != nil {
-			// 	fmt.Println(err)
-			// 	continue
-			// }
-			// files = append(files, f)
+		var skip bool
+		if _, err := os.Stat(path); err != nil {
+			fmt.Println(err)
+			skip = true
 		} else if os.IsNotExist(err) {
 			fmt.Println(err)
-			continue
+			skip = true
 		} else {
 			fmt.Println(err)
+			skip = true
+		}
+		if skip {
 			continue
 		}
 		goodPaths = append(goodPaths, path)

@@ -70,6 +70,8 @@ func gUnzip(in *os.File, out *os.File, level int) (int, error) {
 	bw := bufio.NewWriter(out)
 	readWriter = bufio.NewReadWriter(br, bw)
 
+	defer gzipReader.Close()
+
 	buf = make([]byte, 2048)
 
 	for {
@@ -113,7 +115,10 @@ func gZip(in *os.File, out *os.File, level int) (int, error) {
 		return 0, err
 	}
 	bw := bufio.NewWriter(gzipWriter)
+
 	readWriter = bufio.NewReadWriter(br, bw)
+
+	defer gzipWriter.Close()
 
 	buf = make([]byte, 2048)
 

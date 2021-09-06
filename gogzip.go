@@ -52,12 +52,13 @@ func isGzipped(in *os.File) (gzipped bool, err error) {
 
 	switch filetype {
 	case "application/x-gzip", "application/zip":
-		return true, err
-	default:
-		return false, err
+		gzipped = true
 	}
+
+	return
 }
 
+// https://gist.github.com/alex-ant/aeaaf497055590dacba760af24839b8d
 func gZipData(data []byte) (compressedData []byte, err error) {
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
@@ -207,16 +208,16 @@ func colour(colour int, input ...string) (str string) {
 	// Choose colour for output or none
 	switch colour {
 	case brightGreen:
-		return gchalk.BrightGreen(str)
+		str = gchalk.BrightGreen(str)
 	case brightYellow:
-		return gchalk.BrightYellow(str)
+		str = gchalk.BrightYellow(str)
 	case brightBlue:
-		return gchalk.BrightBlue(str)
+		str = gchalk.BrightBlue(str)
 	case brightRed:
-		return gchalk.BrightRed(str)
-	default:
-		return str
+		str = gchalk.BrightRed(str)
 	}
+
+	return
 }
 
 func checkPath(path string) error {
@@ -232,30 +233,26 @@ func checkPath(path string) error {
 	return err
 }
 
-func openFile(path string) (*os.File, error) {
-	err := checkPath(path)
+func openFile(path string) (file *os.File, err error) {
+	err = checkPath(path)
 	if err != nil {
-		return nil, err
+		return
 	}
-	file, err := os.OpenFile(path, os.O_RDWR, 0644)
+	file, err = os.OpenFile(path, os.O_RDWR, 0644)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return file, nil
+	return
 }
 
-func createFile(path string) (*os.File, error) {
-	// file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	file, err := os.Create(path)
+func createFile(path string) (file *os.File, err error) {
+	file, err = os.Create(path)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return file, nil
+	return
 }
 
 // printHelp print out simple help output

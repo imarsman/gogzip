@@ -21,7 +21,7 @@ implement.
 * `gogzip --stdout` - gzip standard input and send to standard output
 * `gogzip -d <file1> <file2>` - decompress instead of gzip - not implemented yet
 * `gogzip -k <file1> <file2>` - do not delete original file
-* `gogzip -l <file1> <file2>` - use compression level `0-9`
+* `gogzip -l <file1> <file2>` - use compression level `0-9` with 0 being no compression
 * `gogzip -q <file1> <file2>` - quiet output (no complaints for invalid input)
 * `gogzip -L <file1> <file2>` - give summary information for listed files
 * `gogzip -t <file1> <file2>` - test compressed file integrity - not implemented

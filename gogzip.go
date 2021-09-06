@@ -304,7 +304,7 @@ func main() {
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
 
 	var forceFlag bool
-	flag.BoolVar(&forceFlag, "q", false, "force")
+	flag.BoolVar(&forceFlag, "f", false, "force overwrite")
 
 	var quietFlag bool
 	flag.BoolVar(&quietFlag, "q", false, "quiet output")
@@ -528,6 +528,18 @@ func main() {
 		var compressionFileName = gzipFName
 		if decompress {
 			compressionFileName = noGzipFname
+		}
+
+		// If force flag is true ask
+		if _, err := os.Stat(compressionFileName); err == nil {
+			if !forceFlag {
+				reader := bufio.NewReader(os.Stdin)
+				fmt.Print(fmt.Sprintf("File %s exists. Overwrite? (y/n)", compressionFileName))
+				choice, _ := reader.ReadString('\n')
+				if strings.ToLower(choice) == "n" {
+					return
+				}
+			}
 		}
 
 		// open file and show error and skip if error

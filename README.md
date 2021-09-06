@@ -27,7 +27,8 @@ implement.
 * `gogzip -q <file1> <file2>` - quiet output (no complaints for invalid input)
 * `gogzip -L <file1> <file2>` - give summary information for listed files
 * `gogzip -t <file1> <file2>` - test file list integrity
-* `gogzip -f <file1> <file2>` - force overwrite etc. - not implemented yet
+* `gogzip -f <file1> <file2>` - force overwrite etc. - implemented when file is
+  would be overriden
 
 ## Notes
 

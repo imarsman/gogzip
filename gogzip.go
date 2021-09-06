@@ -360,21 +360,27 @@ func main() {
 		goodPaths = append(goodPaths, path)
 	}
 
+	// Test a file at a path
+	// allows defer to work in case of error
+	var testFile = func(path string) {
+		inFile, err := openFile(path)
+		defer inFile.Close()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			return
+		}
+		_, err = testGzipped(inFile, true)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			return
+		}
+	}
+
 	// Implement the -t flag to test all input files
 	if test {
 		if len(goodPaths) > 0 {
 			for _, path := range goodPaths {
-				inFile, err := openFile(path)
-				defer inFile.Close()
-				if err != nil {
-					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-					continue
-				}
-				_, err = testGzipped(inFile, true)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-					continue
-				}
+				testFile(path)
 			}
 		}
 		os.Exit(0)
@@ -482,6 +488,7 @@ func main() {
 			}
 			return
 		}
+
 		// check if gzipped and skip if error or if gzipped
 		gzipped, err := isGzipped(inFile, true)
 		if err != nil {
@@ -496,6 +503,7 @@ func main() {
 			}
 			return
 		}
+
 		// set gzipped name
 		var gzipFName string = path + ".gz"
 

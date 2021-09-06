@@ -303,6 +303,9 @@ func main() {
 	var helpFlag bool
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
 
+	var forceFlag bool
+	flag.BoolVar(&forceFlag, "q", false, "force")
+
 	var quietFlag bool
 	flag.BoolVar(&quietFlag, "q", false, "quiet output")
 

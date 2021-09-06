@@ -2,7 +2,9 @@ package main
 
 import (
 	// "exec"
+
 	"bytes"
+	"compress/gzip"
 	"os/exec"
 	"testing"
 
@@ -45,7 +47,9 @@ func cleanup() error {
 }
 
 func TestStart(t *testing.T) {
-	cleanup()
+	is := is.New(t)
+	err := cleanup()
+	is.NoErr(err)
 }
 func TestRunCmd(t *testing.T) {
 	is := is.New(t)
@@ -66,6 +70,8 @@ func TestRunGetFile(t *testing.T) {
 
 	file, err := openFile("sample/1.txt")
 	is.NoErr(err)
+	defer file.Close()
+
 	is.True(file != nil)
 	t.Log(file.Name())
 }
@@ -75,10 +81,57 @@ func TestCreateFile(t *testing.T) {
 
 	file, err := createFile("sample/1.txt.gz")
 	is.NoErr(err)
+	defer file.Close()
+
 	is.True(file != nil)
 	t.Log(file.Name())
 }
 
+func TestGzip(t *testing.T) {
+	is := is.New(t)
+	in, err := openFile("sample/1.txt")
+	is.NoErr(err)
+	defer in.Close()
+
+	out, err := createFile("sample/1.txt.gz")
+	defer out.Close()
+
+	count, err := gZip(in, out, gzip.BestCompression)
+	is.True(count != 0)
+	t.Log("bytes", count)
+}
+
+func TestGUzip(t *testing.T) {
+	is := is.New(t)
+
+	in, err := openFile("sample/1.txt.gz")
+	is.NoErr(err)
+	defer in.Close()
+
+	bytes, count, err := gUnzip(in)
+	is.NoErr(err)
+	is.True(count > 0)
+	is.True(len(bytes) > 0)
+}
+
+func TestGUzipToFile(t *testing.T) {
+	is := is.New(t)
+
+	in, err := openFile("sample/1.txt.gz")
+	is.NoErr(err)
+	defer in.Close()
+
+	out, err := createFile("sample/1-new.txt.gz")
+	is.NoErr(err)
+	defer out.Close()
+
+	count, err := gUnzipToFile(in, out)
+	is.NoErr(err)
+	is.True(count > 0)
+}
+
 func TestEnd(t *testing.T) {
-	cleanup()
+	is := is.New(t)
+	err := cleanup()
+	is.NoErr(err)
 }

@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"compress/gzip"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -29,7 +31,6 @@ const (
 )
 
 func isGzipped(in *os.File) (bool, error) {
-	defer in.Close()
 	buff := make([]byte, 512)
 
 	// why 512 bytes ? see http://golang.org/pkg/net/http/#DetectContentType
@@ -57,93 +58,70 @@ func isGzipped(in *os.File) (bool, error) {
 	}
 }
 
-func gUnzip(in *os.File, out *os.File, level int) (int, error) {
-	var written int
-	buf := make([]byte, 2048)
-	var readWriter *bufio.ReadWriter
-
-	gzipReader, err := gzip.NewReader(in)
-	if err != nil {
-		return 0, err
-	}
-	br := bufio.NewReader(gzipReader)
-
-	bw := bufio.NewWriter(out)
-	readWriter = bufio.NewReadWriter(br, bw)
-
-	defer gzipReader.Close()
-
-	buf = make([]byte, 2048)
-
-	for {
-		n, err := readWriter.Read(buf)
-		if err != nil && err != io.EOF {
-			fmt.Fprintln(os.Stderr, err.Error())
-			break
-		}
-		if n == 0 && err == io.EOF {
-			break
-		}
-		n, err = readWriter.Write(buf[0:n])
-		if err != nil {
-			return 0, err
-		}
-		written += n
-
-		// The write method for fileWriter.write does flush.
-		readWriter.Flush()
-	}
-
-	_, err = in.Seek(0, io.SeekStart)
-	if err != nil {
-		return 0, err
-	}
-
-	return written, nil
-}
-
 func gZip(in *os.File, out *os.File, level int) (int, error) {
-	var written int
-
-	buf := make([]byte, 2048)
-	var readWriter *bufio.ReadWriter
+	defer in.Close()
+	defer out.Close()
 
 	br := bufio.NewReader(in)
 
-	gzipWriter := gzip.NewWriter(out)
-	gzipWriter, err := gzip.NewWriterLevel(gzipWriter, level)
+	// Find out if reading into a buffer then incrementally writing would work
+	data, err := ioutil.ReadAll(br)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
 		return 0, err
 	}
-	bw := bufio.NewWriter(gzipWriter)
 
-	readWriter = bufio.NewReadWriter(br, bw)
-
+	gzipWriter := gzip.NewWriter(out)
 	defer gzipWriter.Close()
 
-	buf = make([]byte, 2048)
+	n, err := gzipWriter.Write(data)
 
-	for {
-		n, err := readWriter.Read(buf)
-		if err != nil && err != io.EOF {
-			fmt.Fprintln(os.Stderr, err.Error())
-			break
-		}
-		if n == 0 && err == io.EOF {
-			break
-		}
-		n, err = readWriter.Write(buf[0:n])
-		written += n
-		// The write method for fileWriter.write does flush.
-		readWriter.Flush()
+	return n, nil
+}
+
+func gUnzip(in *os.File) ([]byte, int, error) {
+	gzipped, err := isGzipped(in)
+	if err != nil {
+		return []byte{}, 0, err
+	}
+	if gzipped == false {
+		return []byte{}, 0, fmt.Errorf("file not gzipped %s", in.Name())
 	}
 
-	_, err = in.Seek(0, io.SeekStart)
+	gzipReader, err := gzip.NewReader(in)
+	defer gzipReader.Close()
+
+	// Find out if reading into a buffer then incrementally writing would work
+	data, err := ioutil.ReadAll(gzipReader)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return []byte{}, 0, err
+	}
+
+	buf := new(bytes.Buffer)
+	n, err := buf.Write(data)
+
+	return buf.Bytes(), n, nil
+}
+
+func gUnzipToFile(in *os.File, out *os.File) (int, error) {
+	gzipped, err := isGzipped(in)
 	if err != nil {
 		return 0, err
 	}
+	if gzipped == false {
+		return 0, fmt.Errorf("file not gzipped %s", in.Name())
+	}
 
-	return written, nil
+	data, n, err := gUnzip(in)
+	if err != nil {
+		return 0, err
+	}
+	bw := bufio.NewWriter(out)
+	bw.Write(data)
+	bw.Flush()
+
+	return n, nil
 }
 
 func colour(colour int, input ...string) string {
@@ -196,7 +174,11 @@ func openFile(path string) (*os.File, error) {
 }
 
 func createFile(path string) (*os.File, error) {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	// file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	file, err := os.Create(path)
 	if err != nil {
 		return nil, err
 	}

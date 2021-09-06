@@ -286,6 +286,9 @@ func main() {
 	var helpFlag bool
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
 
+	var quietFlag bool
+	flag.BoolVar(&quietFlag, "q", false, "quiet output")
+
 	flag.BoolVar(&stdoutFlag, "c", false, "send to standard out")
 	flag.BoolVar(&stdoutFlag, "stdout", false, "send to standard out")
 
@@ -336,14 +339,36 @@ func main() {
 	if !stdoutFlag && len(goodPaths) > 0 {
 		// files := make([]*os.File, 0, len(paths))
 		for _, p := range goodPaths {
-			var fname string = p + ".gz"
-			file, err := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0644)
+			inFile, err := openFile(p)
+			if err != nil {
+				if !quietFlag {
+					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+				}
+				continue
+			}
+			gzipped, err := isGzipped(inFile, true)
+			if err != nil {
+				if !quietFlag {
+					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+				}
+				continue
+			}
+			if gzipped {
+				if !quietFlag {
+					fmt.Fprintln(os.Stderr, fmt.Errorf("file already gzipped %s", p))
+				}
+				continue
+			}
+
+			var gzipFName string = p + ".gz"
+			gzipFile, err := os.OpenFile(gzipFName, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 				continue
 			}
-			fmt.Println(file.Name())
+			fmt.Println(gzipFile.Name())
 		}
+		os.Exit(0) // exit because we dealt with named files
 	}
 
 	if stdoutFlag && len(goodPaths) > 0 {

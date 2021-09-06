@@ -355,6 +355,7 @@ func main() {
 				"uncompressed_name",
 			)
 
+			count := 0
 			for _, path := range goodPaths {
 				inFile, err := openFile(path)
 				defer inFile.Close()
@@ -363,6 +364,21 @@ func main() {
 						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 					}
 					return
+				}
+
+				// check if gzipped and skip if error or if gzipped
+				gzipped, err := isGzipped(inFile, true)
+				if err != nil {
+					if !quietFlag {
+						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+					}
+					continue
+				}
+				if !gzipped {
+					// if !quietFlag {
+					// 	fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file not gzipped %s", path)))
+					// }
+					continue
 				}
 
 				s, err := os.Stat(path)
@@ -397,16 +413,20 @@ func main() {
 				totalCompressed += compressedCount
 				totalUncompressed += uncompressedCount
 				totalRatio = totalRatio + ratio
+
+				count++
 			}
-			ratioStr := fmt.Sprintf("%.2f", totalRatio*100/float64(len(goodPaths)))
-			name := "(totals)"
-			fmt.Fprintf(os.Stdout,
-				"  %10d %12d %7s%% %17s\n",
-				totalCompressed,
-				totalUncompressed,
-				ratioStr,
-				name,
-			)
+			if count > 1 {
+				ratioStr := fmt.Sprintf("%.2f", totalRatio*100/float64(len(goodPaths)))
+				name := "(totals)"
+				fmt.Fprintf(os.Stdout,
+					"  %10d %12d %7s%% %17s\n",
+					totalCompressed,
+					totalUncompressed,
+					ratioStr,
+					name,
+				)
+			}
 
 			os.Exit(0) // exit because we dealt with named files
 		}

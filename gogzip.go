@@ -322,7 +322,7 @@ func main() {
 		} else if os.IsNotExist(err) {
 			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 			skip = true
-		} else {
+		} else if err != nil {
 			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 			skip = true
 		}
@@ -330,8 +330,6 @@ func main() {
 			continue
 		}
 		goodPaths = append(goodPaths, path)
-
-		fmt.Println(paths)
 	}
 
 	// There are files to compress
@@ -381,8 +379,6 @@ func main() {
 					}
 					continue
 				}
-				fmt.Println(gzipFile.Name())
-
 			}
 
 			inFile.Close()

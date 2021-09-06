@@ -31,30 +31,30 @@ const (
 	noColour // Can use to default to no colour output
 )
 
-func isGzipped(in *os.File) (bool, error) {
+func isGzipped(in *os.File) (gzipped bool, err error) {
 	// why 512 bytes ? see http://golang.org/pkg/net/http/#DetectContentType
 	buff := make([]byte, 512)
 
-	_, err := in.Seek(0, io.SeekStart)
+	_, err = in.Seek(0, io.SeekStart)
 	if err != nil {
-		return false, err
+		return
 	}
 	_, err = in.Read(buff)
 	if err != nil {
-		return false, err
+		return
 	}
 	_, err = in.Seek(0, io.SeekStart)
 	if err != nil {
-		return false, err
+		return
 	}
 
 	filetype := http.DetectContentType(buff)
 
 	switch filetype {
 	case "application/x-gzip", "application/zip":
-		return true, nil
+		return true, err
 	default:
-		return false, nil
+		return false, err
 	}
 }
 
@@ -196,12 +196,12 @@ func gUnzipToFile(in *os.File, out *os.File) (count int, err error) {
 	return
 }
 
-func colour(colour int, input ...string) string {
-	str := fmt.Sprint(strings.Join(input, " "))
+func colour(colour int, input ...string) (str string) {
+	str = fmt.Sprint(strings.Join(input, " "))
 	str = strings.Replace(str, "  ", " ", -1)
 
 	if !useColour {
-		return str
+		return
 	}
 
 	// Choose colour for output or none

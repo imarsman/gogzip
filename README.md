@@ -49,4 +49,24 @@ There are some tests which can be run by typing
 
 `go test -v .`
 
+# Simple tests
+
+As currently implemented, BSD gzip is faster.
+
+```
+$: time for i in {1..1000}; do ./gogzip -k sample/1.txt; done
+
+real	0m4.684s
+user	0m2.125s
+sys	0m2.014s
+```
+
+```
+$: time for i in {1..1000}; do gzip -k -f sample/1.txt; done
+
+real	0m2.616s
+user	0m0.943s
+sys	0m1.517s
+```
+
   -- Ian Marsman

@@ -1,6 +1,8 @@
 # gogzip
 An implementation of gzip in Go
 
+gzip was first publicly released in  31 October 1992.
+
 This is not finished. My goal with this is to improve my knowledge of i/o,
 readers, writers, files, and compression.
 

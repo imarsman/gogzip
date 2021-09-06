@@ -255,4 +255,43 @@ func main() {
 		}
 		fmt.Println(file.Name())
 	}
+
+	// Use stdin if available, otherwise exit.
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode()&os.ModeCharDevice) == 0 && 1 == 2 {
+		br := bufio.NewReader(os.Stdin)
+		bw := bufio.NewWriter(gzip.NewWriter(os.Stdout))
+
+		rw := bufio.NewReadWriter(br, bw)
+
+		buf := make([]byte, 0, 4*1024)
+
+		nBytes, nChunks := int64(0), int64(0)
+		for {
+			n, err := rw.Read(buf[:cap(buf)])
+			buf = buf[:n]
+
+			if n == 0 {
+				if err == nil {
+					continue
+				}
+				if err == io.EOF {
+					break
+				}
+				fmt.Fprintf(os.Stderr, err.Error())
+				os.Exit(1)
+			}
+
+			rw.Write(buf[:n])
+			nChunks++
+			nBytes += int64(len(buf))
+
+			if err != nil && err != io.EOF {
+				fmt.Fprintf(os.Stderr, err.Error())
+				os.Exit(1)
+			}
+		}
+
+	} else if 1 == 2 {
+	}
 }

@@ -31,21 +31,39 @@ const (
 	noColour // Can use to default to no colour output
 )
 
-func isGzipped(in *os.File) (gzipped bool, err error) {
+func isGzippedFromBytes(data []byte) (gzipped bool, err error) {
+	// why 512 bytes ? see http://golang.org/pkg/net/http/#DetectContentType
+	// buff := make([]byte, 512)
+
+	filetype := http.DetectContentType(data[0 : 512-1])
+
+	switch filetype {
+	case "application/x-gzip", "application/zip":
+		gzipped = true
+	}
+
+	return
+}
+
+func isGzipped(in *os.File, seek bool) (gzipped bool, err error) {
 	// why 512 bytes ? see http://golang.org/pkg/net/http/#DetectContentType
 	buff := make([]byte, 512)
 
-	_, err = in.Seek(0, io.SeekStart)
-	if err != nil {
-		return
+	if seek {
+		_, err = in.Seek(0, io.SeekStart)
+		if err != nil {
+			return
+		}
 	}
 	_, err = in.Read(buff)
 	if err != nil {
 		return
 	}
-	_, err = in.Seek(0, io.SeekStart)
-	if err != nil {
-		return
+	if seek {
+		_, err = in.Seek(0, io.SeekStart)
+		if err != nil {
+			return
+		}
 	}
 
 	filetype := http.DetectContentType(buff)
@@ -101,7 +119,7 @@ func gZipFromFile(in *os.File, level int) (compressedData []byte, count int, err
 }
 
 func gZipToFile(in *os.File, out *os.File, level int) (count int, err error) {
-	gzipped, err := isGzipped(in)
+	gzipped, err := isGzipped(in, true)
 	if err != nil {
 		return count, err
 	}
@@ -154,7 +172,7 @@ func gUnzipData(data []byte) (resData []byte, err error) {
 }
 
 func gUnzipFromFile(in *os.File) (resData []byte, count int, err error) {
-	gzipped, err := isGzipped(in)
+	gzipped, err := isGzipped(in, true)
 	if err != nil {
 		return []byte{}, 0, err
 	}
@@ -178,7 +196,7 @@ func gUnzipFromFile(in *os.File) (resData []byte, count int, err error) {
 }
 
 func gUnzipToFile(in *os.File, out *os.File) (count int, err error) {
-	gzipped, err := isGzipped(in)
+	gzipped, err := isGzipped(in, true)
 	if err != nil {
 		return
 	}
@@ -336,14 +354,33 @@ func main() {
 		// Use stdin if available, otherwise exit.
 		stat, _ := os.Stdin.Stat()
 		if (stat.Mode() & os.ModeCharDevice) == 0 {
-			data, _, err := gZipFromFile(os.Stdin, level)
+			br := bufio.NewReader(os.Stdin)
+
+			// Find out if reading into a buffer then incrementally writing would work
+			data, err := ioutil.ReadAll(br)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-				os.Exit(1)
+				fmt.Fprintln(os.Stderr, err.Error())
+				return
 			}
 
-			reader := bytes.NewReader(data)
-			io.CopyBuffer(os.Stdout, reader, data)
+			gzipped, err := isGzippedFromBytes(data)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err.Error())
+				return
+			}
+			if gzipped {
+				reader := bytes.NewReader(data)
+				io.CopyBuffer(os.Stdout, reader, data)
+				os.Exit(0)
+			}
+			compressedData, err := gZipData(data)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err.Error())
+				return
+			}
+			reader := bytes.NewReader(compressedData)
+			io.CopyBuffer(os.Stdout, reader, compressedData)
+			os.Exit(0)
 		}
 	}
 }

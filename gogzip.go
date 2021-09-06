@@ -344,6 +344,9 @@ func main() {
 
 	if list {
 		if len(goodPaths) > 0 {
+			var totalCompressed int64 = 0
+			totalUncompressed := 0
+			var totalRatio float64 = 0
 			fmt.Fprintf(os.Stdout,
 				"  %10s %12s %8s %17s\n",
 				"compressed",
@@ -391,8 +394,20 @@ func main() {
 					ratioStr,
 					name,
 				)
-
+				totalCompressed += compressedCount
+				totalUncompressed += uncompressedCount
+				totalRatio = totalRatio + ratio
 			}
+			ratioStr := fmt.Sprintf("%.2f", totalRatio*100/float64(len(goodPaths)))
+			name := "(totals)"
+			fmt.Fprintf(os.Stdout,
+				"  %10d %12d %7s%% %17s\n",
+				totalCompressed,
+				totalUncompressed,
+				ratioStr,
+				name,
+			)
+
 			os.Exit(0) // exit because we dealt with named files
 		}
 

@@ -24,8 +24,7 @@ implement.
 * `gogzip -l <file1> <file2>` - use compression level `0-9` with 0 being no compression
 * `gogzip -q <file1> <file2>` - quiet output (no complaints for invalid input)
 * `gogzip -L <file1> <file2>` - give summary information for listed files
-* `gogzip -t <file1> <file2>` - test compressed file integrity - not implemented
-  yet
+* `gogzip -t <file1> <file2>` - test file list integrity
 
 ## Notes
 

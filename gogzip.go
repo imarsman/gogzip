@@ -71,6 +71,24 @@ func isGzipped(in *os.File, seek bool) (gzipped bool, err error) {
 	return
 }
 
+// Look in file for gzip magic header
+func testGzipped(in *os.File, seek bool) (gzipped bool, err error) {
+	gzipped, err = isGzipped(in, true)
+	if err != nil {
+		return false, err
+	}
+	if !gzipped {
+		return false, fmt.Errorf("file %s not gzipped", in.Name())
+	}
+
+	_, _, err = gUnzipFromFile(in)
+	if err != nil {
+		return false, err
+	}
+
+	return
+}
+
 // https://gist.github.com/alex-ant/aeaaf497055590dacba760af24839b8d
 func gZipData(data []byte) (compressedData []byte, err error) {
 	var b bytes.Buffer
@@ -342,6 +360,26 @@ func main() {
 		goodPaths = append(goodPaths, path)
 	}
 
+	// Implement the -t flag to test all input files
+	if test {
+		if len(goodPaths) > 0 {
+			for _, path := range goodPaths {
+				inFile, err := openFile(path)
+				defer inFile.Close()
+				if err != nil {
+					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+					continue
+				}
+				_, err = testGzipped(inFile, true)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+					continue
+				}
+			}
+		}
+		os.Exit(0)
+	}
+
 	if list {
 		if len(goodPaths) > 0 {
 			var totalCompressed int64 = 0
@@ -363,7 +401,7 @@ func main() {
 					if !quietFlag {
 						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 					}
-					return
+					continue
 				}
 
 				// check if gzipped and skip if error or if gzipped

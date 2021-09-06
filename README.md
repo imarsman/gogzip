@@ -31,4 +31,22 @@ implement.
 BSD gzip will forward to stdout if there is non-gzipped stdin. GNU gzip will
 not. I have implemented gogzip to behave like BSD in this way.
 
+## Building and Running
+
+The app can be built by typing the command below. If you have an older version
+of Go installed you can change the version number in go.mod if there is a
+complaint on trying to compile. This should be compatible with earlier versions
+of Go like 1.14 and 1.15 though I have not checked. This app does not use
+embedding, which appeared in Go 1.16.
+
+`go build .`
+
+The app can be run without building by typing
+
+`go run gogzip.go`
+
+There are some tests which can be run by typing
+
+`go test -v .`
+
   -- Ian Marsman

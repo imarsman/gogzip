@@ -96,7 +96,7 @@ func TestGzip(t *testing.T) {
 	out, err := createFile("sample/1.txt.gz")
 	defer out.Close()
 
-	count, err := gZip(in, out, gzip.BestCompression)
+	count, err := gZipToFile(in, out, gzip.BestCompression)
 	is.True(count != 0)
 	t.Log("bytes", count)
 }
@@ -131,7 +131,7 @@ func TestGUzipToFile(t *testing.T) {
 }
 
 func TestEnd(t *testing.T) {
-	is := is.New(t)
-	err := cleanup()
-	is.NoErr(err)
+	// is := is.New(t)
+	// err := cleanup()
+	// is.NoErr(err)
 }

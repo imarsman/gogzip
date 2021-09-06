@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -58,7 +59,28 @@ func isGzipped(in *os.File) (bool, error) {
 	}
 }
 
-func gZip(in *os.File, out *os.File, level int) (int, error) {
+func gZip(in *os.File, level int) ([]byte, int, error) {
+	br := bufio.NewReader(in)
+
+	// Find out if reading into a buffer then incrementally writing would work
+	data, err := ioutil.ReadAll(br)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return []byte{}, 0, err
+	}
+
+	bb := new(bytes.Buffer)
+	gzipWriter := gzip.NewWriter(bb)
+
+	// gzipWriter := gzip.NewWriter(out)
+	// defer gzipWriter.Close()
+
+	n, err := gzipWriter.Write(data)
+
+	return bb.Bytes(), n, nil
+}
+
+func gZipToFile(in *os.File, out *os.File, level int) (int, error) {
 	defer in.Close()
 	defer out.Close()
 
@@ -256,45 +278,56 @@ func main() {
 		fmt.Println(file.Name())
 	}
 
+	if stdoutFlag && len(goodPaths) > 0 {
+		fmt.Fprintf(os.Stderr, errors.New("files specified along with stdout").Error())
+		os.Exit(1)
+	}
+
 	// Use stdin if available, otherwise exit.
 	stat, _ := os.Stdin.Stat()
-	if (stat.Mode()&os.ModeCharDevice) == 0 && 1 == 2 {
-		br := bufio.NewReader(os.Stdin)
-
-		bb := new(bytes.Buffer)
-		bw := bufio.NewWriter(bb)
-
-		rw := bufio.NewReadWriter(br, bw)
-
-		nBytes, nChunks := int64(0), int64(0)
-		buf := make([]byte, 0, 4*1024)
-		for {
-			n, err := rw.Read(buf[:cap(buf)])
-			buf = buf[:n]
-
-			if n == 0 {
-				if err == nil {
-					continue
-				}
-				if err == io.EOF {
-					break
-				}
-				fmt.Fprintf(os.Stderr, err.Error())
-				os.Exit(1)
-			}
-
-			rw.Write(buf[:n])
-			bw.Flush()
-
-			nChunks++
-			nBytes += int64(len(buf))
-
-			if err != nil && err != io.EOF {
-				fmt.Fprintf(os.Stderr, err.Error())
-				os.Exit(1)
-			}
+	if (stat.Mode()&os.ModeCharDevice) == 0 && len(goodPaths) == 0 && stdoutFlag {
+		data, _, err := gZip(os.Stdin, 6)
+		if err != nil {
 		}
-		io.Copy(gzip.NewWriter(os.Stdout), bb)
-	} else if 1 == 2 {
+		// bb := new(bytes.Buffer)
+		reader := bytes.NewReader(data)
+		io.CopyBuffer(os.Stdout, reader, data)
+
+		// br := bufio.NewReader(os.Stdin)
+
+		// bb := new(bytes.Buffer)
+		// bw := bufio.NewWriter(bb)
+
+		// rw := bufio.NewReadWriter(br, bw)
+
+		// nBytes, nChunks := int64(0), int64(0)
+		// buf := make([]byte, 0, 4*1024)
+		// for {
+		// 	n, err := rw.Read(buf[:cap(buf)])
+		// 	buf = buf[:n]
+
+		// 	if n == 0 {
+		// 		if err == nil {
+		// 			continue
+		// 		}
+		// 		if err == io.EOF {
+		// 			break
+		// 		}
+		// 		fmt.Fprintf(os.Stderr, err.Error())
+		// 		os.Exit(1)
+		// 	}
+
+		// 	rw.Write(buf[:n])
+		// 	bw.Flush()
+
+		// 	nChunks++
+		// 	nBytes += int64(len(buf))
+
+		// 	if err != nil && err != io.EOF {
+		// 		fmt.Fprintf(os.Stderr, err.Error())
+		// 		os.Exit(1)
+		// 	}
+		// }
+		// io.Copy(gzip.NewWriter(os.Stdout), bb)
 	}
 }

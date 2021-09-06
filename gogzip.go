@@ -260,13 +260,14 @@ func main() {
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode()&os.ModeCharDevice) == 0 && 1 == 2 {
 		br := bufio.NewReader(os.Stdin)
-		bw := bufio.NewWriter(gzip.NewWriter(os.Stdout))
+
+		bb := new(bytes.Buffer)
+		bw := bufio.NewWriter(bb)
 
 		rw := bufio.NewReadWriter(br, bw)
 
-		buf := make([]byte, 0, 4*1024)
-
 		nBytes, nChunks := int64(0), int64(0)
+		buf := make([]byte, 0, 4*1024)
 		for {
 			n, err := rw.Read(buf[:cap(buf)])
 			buf = buf[:n]
@@ -283,6 +284,8 @@ func main() {
 			}
 
 			rw.Write(buf[:n])
+			bw.Flush()
+
 			nChunks++
 			nBytes += int64(len(buf))
 
@@ -291,7 +294,7 @@ func main() {
 				os.Exit(1)
 			}
 		}
-
+		io.Copy(gzip.NewWriter(os.Stdout), bb)
 	} else if 1 == 2 {
 	}
 }

@@ -58,27 +58,55 @@ func isGzipped(in *os.File) (bool, error) {
 	}
 }
 
-func gZip(in *os.File, level int) ([]byte, int, error) {
+func gZipData(data []byte) (compressedData []byte, err error) {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+
+	_, err = gz.Write(data)
+	if err != nil {
+		return
+	}
+
+	if err = gz.Flush(); err != nil {
+		return
+	}
+
+	if err = gz.Close(); err != nil {
+		return
+	}
+
+	compressedData = b.Bytes()
+
+	return
+}
+
+func gZipFromFile(in *os.File, level int) (compressedData []byte, count int, err error) {
 	br := bufio.NewReader(in)
 
 	// Find out if reading into a buffer then incrementally writing would work
 	data, err := ioutil.ReadAll(br)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
-		return []byte{}, 0, err
+		return
 	}
 
 	bb := new(bytes.Buffer)
 	gzipWriter := gzip.NewWriter(bb)
 	defer gzipWriter.Close()
 
-	n, err := gzipWriter.Write(data)
+	count, err = gzipWriter.Write(data)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return
+	}
 	gzipWriter.Flush()
 
-	return bb.Bytes(), n, nil
+	compressedData = bb.Bytes()
+
+	return
 }
 
-func gZipToFile(in *os.File, out *os.File, level int) (int, error) {
+func gZipToFile(in *os.File, out *os.File, level int) (count int, err error) {
 	br := bufio.NewReader(in)
 
 	// Find out if reading into a buffer then incrementally writing would work
@@ -91,20 +119,42 @@ func gZipToFile(in *os.File, out *os.File, level int) (int, error) {
 	gzipWriter := gzip.NewWriter(out)
 	defer gzipWriter.Close()
 
-	n, err := gzipWriter.Write(data)
+	count, err = gzipWriter.Write(data)
 
-	return n, nil
+	return
 }
 
-func gUnzip(in *os.File) ([]byte, int, error) {
+func gUnzipData(data []byte) (resData []byte, err error) {
+	b := bytes.NewBuffer(data)
+
+	var r io.Reader
+	r, err = gzip.NewReader(b)
+	if err != nil {
+		return
+	}
+
+	var resB bytes.Buffer
+	_, err = resB.ReadFrom(r)
+	if err != nil {
+		return
+	}
+
+	resData = resB.Bytes()
+
+	return
+}
+
+func gUnzipFromFile(in *os.File) (resData []byte, count int, err error) {
 	gzipped, err := isGzipped(in)
 	if err != nil {
 		return []byte{}, 0, err
 	}
 	if gzipped == false {
-		return []byte{}, 0, fmt.Errorf("file not gzipped %s", in.Name())
+		return resData, 0, fmt.Errorf("file not gzipped %s", in.Name())
 	}
 
+	// buf := new(bytes.Buffer)
+	// reader, _ := gzip.NewReader(buf)
 	gzipReader, err := gzip.NewReader(in)
 	defer gzipReader.Close()
 
@@ -112,33 +162,38 @@ func gUnzip(in *os.File) ([]byte, int, error) {
 	data, err := ioutil.ReadAll(gzipReader)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
-		return []byte{}, 0, err
+		return resData, 0, err
 	}
 
 	buf := new(bytes.Buffer)
-	n, err := buf.Write(data)
+	count, err = buf.Write(data)
+	if err != nil {
+		return
+	}
 
-	return buf.Bytes(), n, nil
+	resData = buf.Bytes()
+
+	return
 }
 
-func gUnzipToFile(in *os.File, out *os.File) (int, error) {
+func gUnzipToFile(in *os.File, out *os.File) (count int, err error) {
 	gzipped, err := isGzipped(in)
 	if err != nil {
-		return 0, err
+		return
 	}
 	if gzipped == false {
 		return 0, fmt.Errorf("file not gzipped %s", in.Name())
 	}
 
-	data, n, err := gUnzip(in)
+	data, count, err := gUnzipFromFile(in)
 	if err != nil {
-		return 0, err
+		return
 	}
 	bw := bufio.NewWriter(out)
 	bw.Write(data)
 	bw.Flush()
 
-	return n, nil
+	return
 }
 
 func colour(colour int, input ...string) string {
@@ -284,7 +339,7 @@ func main() {
 		// Use stdin if available, otherwise exit.
 		stat, _ := os.Stdin.Stat()
 		if (stat.Mode() & os.ModeCharDevice) == 0 {
-			data, _, err := gZip(os.Stdin, level)
+			data, _, err := gZipFromFile(os.Stdin, level)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 				os.Exit(1)

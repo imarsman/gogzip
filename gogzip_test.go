@@ -93,6 +93,21 @@ func TestGzip(t *testing.T) {
 	is.NoErr(err)
 	defer in.Close()
 
+	// out, err := createFile("sample/1.txt.gz")
+	// defer out.Close()
+
+	data, count, err := gZipFromFile(in, gzip.BestCompression)
+	is.True(count != 0)
+	t.Log("bytes", count)
+	t.Log(len(data))
+}
+
+func TestGzipToFile(t *testing.T) {
+	is := is.New(t)
+	in, err := openFile("sample/1.txt")
+	is.NoErr(err)
+	defer in.Close()
+
 	out, err := createFile("sample/1.txt.gz")
 	defer out.Close()
 
@@ -108,7 +123,7 @@ func TestGUzip(t *testing.T) {
 	is.NoErr(err)
 	defer in.Close()
 
-	bytes, count, err := gUnzip(in)
+	bytes, count, err := gUnzipFromFile(in)
 	is.NoErr(err)
 	is.True(count > 0)
 	is.True(len(bytes) > 0)

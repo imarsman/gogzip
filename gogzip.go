@@ -70,19 +70,15 @@ func gZip(in *os.File, level int) ([]byte, int, error) {
 
 	bb := new(bytes.Buffer)
 	gzipWriter := gzip.NewWriter(bb)
-
-	// gzipWriter := gzip.NewWriter(out)
-	// defer gzipWriter.Close()
+	defer gzipWriter.Close()
 
 	n, err := gzipWriter.Write(data)
+	gzipWriter.Flush()
 
 	return bb.Bytes(), n, nil
 }
 
 func gZipToFile(in *os.File, out *os.File, level int) (int, error) {
-	defer in.Close()
-	defer out.Close()
-
 	br := bufio.NewReader(in)
 
 	// Find out if reading into a buffer then incrementally writing would work
@@ -293,42 +289,5 @@ func main() {
 		// bb := new(bytes.Buffer)
 		reader := bytes.NewReader(data)
 		io.CopyBuffer(os.Stdout, reader, data)
-
-		// br := bufio.NewReader(os.Stdin)
-
-		// bb := new(bytes.Buffer)
-		// bw := bufio.NewWriter(bb)
-
-		// rw := bufio.NewReadWriter(br, bw)
-
-		// nBytes, nChunks := int64(0), int64(0)
-		// buf := make([]byte, 0, 4*1024)
-		// for {
-		// 	n, err := rw.Read(buf[:cap(buf)])
-		// 	buf = buf[:n]
-
-		// 	if n == 0 {
-		// 		if err == nil {
-		// 			continue
-		// 		}
-		// 		if err == io.EOF {
-		// 			break
-		// 		}
-		// 		fmt.Fprintf(os.Stderr, err.Error())
-		// 		os.Exit(1)
-		// 	}
-
-		// 	rw.Write(buf[:n])
-		// 	bw.Flush()
-
-		// 	nChunks++
-		// 	nBytes += int64(len(buf))
-
-		// 	if err != nil && err != io.EOF {
-		// 		fmt.Fprintf(os.Stderr, err.Error())
-		// 		os.Exit(1)
-		// 	}
-		// }
-		// io.Copy(gzip.NewWriter(os.Stdout), bb)
 	}
 }

@@ -91,18 +91,24 @@ func gZipFromFile(in *os.File, level int) (compressedData []byte, count int, err
 		return
 	}
 
-	bb := new(bytes.Buffer)
-	gzipWriter := gzip.NewWriter(bb)
-	defer gzipWriter.Close()
-
-	count, err = gzipWriter.Write(data)
+	compressedData, err = gZipData(data)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
 		return
 	}
-	gzipWriter.Flush()
+	count = len(compressedData)
 
-	compressedData = bb.Bytes()
+	// bb := new(bytes.Buffer)
+	// gzipWriter := gzip.NewWriter(bb)
+	// defer gzipWriter.Close()
+
+	// count, err = gzipWriter.Write(data)
+	// if err != nil {
+	// 	fmt.Fprintln(os.Stderr, err.Error())
+	// 	return
+	// }
+	// gzipWriter.Flush()
+
+	// compressedData = bb.Bytes()
 
 	return
 }
@@ -117,10 +123,22 @@ func gZipToFile(in *os.File, out *os.File, level int) (count int, err error) {
 		return 0, err
 	}
 
-	gzipWriter := gzip.NewWriter(out)
-	defer gzipWriter.Close()
+	compressedData, err := gZipData(data)
+	if err != nil {
+		return
+	}
+	// count = len(compressedData)
 
-	count, err = gzipWriter.Write(data)
+	bw := bufio.NewWriter(out)
+	count, err = bw.Write(compressedData)
+	if err != nil {
+		return
+	}
+	bw.Flush()
+	// gzipWriter := gzip.NewWriter(out)
+	// defer gzipWriter.Close()
+
+	// count, err = gzipWriter.Write(data)
 
 	return
 }

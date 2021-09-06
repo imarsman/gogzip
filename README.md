@@ -18,11 +18,11 @@ implement.
 
 * `gogzip -h` - print usage
 * `gogzip <file1> <file2>` - gzip files and delete originals
+* `gogzip -k <file1> <file2>` - do not delete original file
 * `gogzip -c` - gzip standard input and send to standard output - with no files
   specified and with uncompressed stdin the `-c` flag is set to true
-* `gogzip --stdout` - gzip standard input and send to standard output
+  * `gogzip --stdout` - gzip standard input and send to standard output
 * `gogzip -d <file1> <file2>` - decompress instead of gzip - not implemented yet
-* `gogzip -k <file1> <file2>` - do not delete original file
 * `gogzip -l <file1> <file2>` - use compression level `0-9` with 0 being no compression
 * `gogzip -q <file1> <file2>` - quiet output (no complaints for invalid input)
 * `gogzip -L <file1> <file2>` - give summary information for listed files

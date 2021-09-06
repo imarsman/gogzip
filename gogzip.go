@@ -291,7 +291,7 @@ func main() {
 	flag.BoolVar(&stdoutFlag, "c", false, "send to standard out")
 	flag.BoolVar(&stdoutFlag, "stdout", false, "send to standard out")
 
-	flag.IntVar(&level, "l", 6, "compression level")
+	flag.IntVar(&level, "l", 6, "compression level (0-9 with 0 being no compression)")
 
 	var test bool
 	flag.BoolVar(&test, "t", false, "test compressed file integrity")
@@ -302,9 +302,19 @@ func main() {
 	flag.BoolVar(&decompress, "d", false, "decompress input")
 	flag.BoolVar(&decompress, "decompress", false, "decompress input")
 
-	flag.BoolVar(&list, "L", false, "list compression information")
+	flag.BoolVar(&list, "L", false, "list compression information (not implemented yet)")
 
 	flag.Parse()
+
+	// override invalid level
+	if level < 0 || level > 9 {
+		if !quietFlag {
+			fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf(
+				"invalid compression level %d - setting to 6", level),
+			))
+		}
+		level = 6
+	}
 
 	paths := flag.Args()
 
@@ -332,67 +342,139 @@ func main() {
 		goodPaths = append(goodPaths, path)
 	}
 
-	// There are files to compress
-	if !stdoutFlag && len(goodPaths) > 0 {
-		// files := make([]*os.File, 0, len(paths))
-		for _, path := range goodPaths {
-			inFile, err := openFile(path)
-			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-				}
-				continue
-			}
-			gzipped, err := isGzipped(inFile, true)
-			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-				}
-				continue
-			}
-			if gzipped {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, fmt.Errorf("file already gzipped %s", path))
-				}
-				continue
-			}
-			var gzipFName string = path + ".gz"
+	if list {
+		if len(goodPaths) > 0 {
+			fmt.Fprintf(os.Stdout,
+				"  %10s %12s %5s %17s\n",
+				"compressed",
+				"uncompressed",
+				"ratio",
+				"uncompressed_name",
+			)
 
-			gzipFile, err := os.OpenFile(gzipFName, os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-				continue
-			}
-
-			_, err = gZipToFile(inFile, gzipFile, level)
-			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-				}
-				continue
-			}
-			if !keepFlag {
-				err = os.Remove(path)
+			for _, path := range goodPaths {
+				inFile, err := openFile(path)
+				defer inFile.Close()
 				if err != nil {
 					if !quietFlag {
 						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 					}
-					continue
+					return
 				}
-			}
 
-			inFile.Close()
-			gzipFile.Close()
+				s, err := os.Stat(path)
+				if err != nil {
+					if !quietFlag {
+						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+					}
+					return
+				}
+				compressedCount := s.Size()
+				_, uncompressedCount, err := gUnzipFromFile(inFile)
+				if err != nil {
+					if !quietFlag {
+						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+					}
+					return
+				}
+				ratio := float64(compressedCount) / float64(uncompressedCount)
+
+				name := path
+				if strings.HasSuffix(path, ".gz") {
+					name = name[:len(path)-3]
+				}
+				ratioStr := fmt.Sprintf("%.2f", ratio*100)
+				fmt.Fprintf(os.Stdout,
+					"  %10d %12d %5s %17s\n",
+					compressedCount,
+					uncompressedCount,
+					ratioStr,
+					name,
+				)
+
+			}
+			os.Exit(0) // exit because we dealt with named files
+		}
+
+	}
+
+	// Do this in separate function to have file closed defer to operate
+	var process = func(path string) {
+		// open the current file
+		inFile, err := openFile(path)
+		defer inFile.Close()
+		if err != nil {
+			if !quietFlag {
+				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			}
+			return
+		}
+		// check if gzipped and skip if error or if gzipped
+		gzipped, err := isGzipped(inFile, true)
+		if err != nil {
+			if !quietFlag {
+				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			}
+			return
+		}
+		if gzipped {
+			if !quietFlag {
+				fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file already gzipped %s", path)))
+			}
+			return
+		}
+		// set gzipped name
+		var gzipFName string = path + ".gz"
+
+		// open file and show error and skip if error
+		gzipFile, err := os.OpenFile(gzipFName, os.O_CREATE|os.O_WRONLY, 0644)
+		defer gzipFile.Close()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			return
+		}
+
+		// gzip output file from input file at level
+		_, err = gZipToFile(inFile, gzipFile, level)
+		if err != nil {
+			if !quietFlag {
+				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			}
+			return
+		}
+		// If keep fla false remove start file
+		if !keepFlag {
+			err = os.Remove(path)
+			if err != nil {
+				if !quietFlag {
+					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+				}
+				return
+			}
+		}
+	}
+
+	// MacOS (BSD) gzip sends to stdout if there is stdin but GNU does not
+	if !stdoutFlag && len(goodPaths) == 0 {
+		stdoutFlag = true
+	}
+
+	// There are files to compress
+	if !stdoutFlag && len(goodPaths) > 0 {
+		// files := make([]*os.File, 0, len(paths))
+		for _, path := range goodPaths {
+			process(path)
 		}
 		os.Exit(0) // exit because we dealt with named files
 	}
 
-	if stdoutFlag && len(goodPaths) > 0 {
+	if stdoutFlag {
 		if !quietFlag {
 			fmt.Fprintln(os.Stderr, colour(brightRed, errors.New("files specified along with stdout").Error()))
 		}
 		os.Exit(1)
-	} else if stdoutFlag {
+		// MacOS gzip will forward when stdin available and no -c flag set
+	} else if stdoutFlag || len(goodPaths) == 0 {
 
 		// Use stdin if available, otherwise exit.
 		stat, _ := os.Stdin.Stat()

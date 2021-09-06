@@ -32,9 +32,8 @@ const (
 )
 
 func isGzipped(in *os.File) (bool, error) {
-	buff := make([]byte, 512)
-
 	// why 512 bytes ? see http://golang.org/pkg/net/http/#DetectContentType
+	buff := make([]byte, 512)
 
 	_, err := in.Seek(0, io.SeekStart)
 	if err != nil {
@@ -250,13 +249,13 @@ func main() {
 	for _, path := range paths {
 		var skip bool
 		if _, err := os.Stat(path); err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 			skip = true
 		} else if os.IsNotExist(err) {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 			skip = true
 		} else {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 			skip = true
 		}
 		if skip {
@@ -272,22 +271,24 @@ func main() {
 		var fname string = p + ".gz"
 		file, err := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 			continue
 		}
 		fmt.Println(file.Name())
 	}
 
 	if stdoutFlag && len(goodPaths) > 0 {
-		fmt.Fprintf(os.Stderr, errors.New("files specified along with stdout").Error())
+		fmt.Fprintln(os.Stderr, colour(brightRed, errors.New("files specified along with stdout").Error()))
 		os.Exit(1)
 	}
 
 	// Use stdin if available, otherwise exit.
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode()&os.ModeCharDevice) == 0 && len(goodPaths) == 0 && stdoutFlag {
-		data, _, err := gZip(os.Stdin, 6)
+		data, _, err := gZip(os.Stdin, level)
 		if err != nil {
+			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			os.Exit(1)
 		}
 		// bb := new(bytes.Buffer)
 		reader := bytes.NewReader(data)

@@ -348,7 +348,7 @@ func main() {
 			totalUncompressed := 0
 			var totalRatio float64 = 0
 			fmt.Fprintf(os.Stdout,
-				"  %10s %12s %8s %17s\n",
+				"  %10s %12s %8s   %17s\n",
 				"compressed",
 				"uncompressed",
 				"ratio",
@@ -404,7 +404,7 @@ func main() {
 				}
 				ratioStr := fmt.Sprintf("%.2f", ratio*100)
 				fmt.Fprintf(os.Stdout,
-					"  %10d %12d %7s%% %17s\n",
+					"  %10d %12d %7s%%   %-17s\n",
 					compressedCount,
 					uncompressedCount,
 					ratioStr,
@@ -420,7 +420,7 @@ func main() {
 				ratioStr := fmt.Sprintf("%.2f", totalRatio*100/float64(len(goodPaths)))
 				name := "(totals)"
 				fmt.Fprintf(os.Stdout,
-					"  %10d %12d %7s%% %17s\n",
+					"  %10d %12d %7s%%   %-17s\n",
 					totalCompressed,
 					totalUncompressed,
 					ratioStr,

@@ -491,46 +491,87 @@ func main() {
 
 		// check if gzipped and skip if error or if gzipped
 		gzipped, err := isGzipped(inFile, true)
-		if err != nil {
-			if !quietFlag {
-				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-			}
-			return
-		}
-		if gzipped {
-			if !quietFlag {
-				fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file already gzipped %s", path)))
-			}
-			return
-		}
-
-		// set gzipped name
-		var gzipFName string = path + ".gz"
-
-		// open file and show error and skip if error
-		gzipFile, err := os.OpenFile(gzipFName, os.O_CREATE|os.O_WRONLY, 0644)
-		defer gzipFile.Close()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-			return
-		}
-
-		// gzip output file from input file at level
-		_, err = gZipToFile(inFile, gzipFile, level)
-		if err != nil {
-			if !quietFlag {
-				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-			}
-			return
-		}
-		// If keep fla false remove start file
-		if !keepFlag {
-			err = os.Remove(path)
+		if decompress {
 			if err != nil {
 				if !quietFlag {
 					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
 				}
 				return
+			}
+			if !gzipped {
+				if !quietFlag {
+					fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file not gzipped %s", path)))
+				}
+				return
+			}
+		} else {
+			if err != nil {
+				if !quietFlag {
+					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+				}
+				return
+			}
+			if gzipped {
+				if !quietFlag {
+					fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file already gzipped %s", path)))
+				}
+				return
+			}
+		}
+		// set gzipped name
+		var gzipFName string = path + ".gz"
+		var noGzipFname = gzipFName[:len(gzipFName)-3]
+
+		var compressionFileName = gzipFName
+		if decompress {
+			compressionFileName = noGzipFname
+		}
+
+		// open file and show error and skip if error
+		compressionFile, err := os.OpenFile(compressionFileName, os.O_CREATE|os.O_WRONLY, 0644)
+		defer compressionFile.Close()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			return
+		}
+
+		if decompress {
+			// gzip output file from input file at level
+			_, err = gUnzipToFile(inFile, compressionFile)
+			if err != nil {
+				if !quietFlag {
+					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+				}
+				return
+			}
+			// If keep fla false remove start file
+			if !keepFlag {
+				err = os.Remove(path)
+				if err != nil {
+					if !quietFlag {
+						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+					}
+					return
+				}
+			}
+		} else {
+			// gzip output file from input file at level
+			_, err = gZipToFile(inFile, compressionFile, level)
+			if err != nil {
+				if !quietFlag {
+					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+				}
+				return
+			}
+			// If keep fla false remove start file
+			if !keepFlag {
+				err = os.Remove(path)
+				if err != nil {
+					if !quietFlag {
+						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+					}
+					return
+				}
 			}
 		}
 	}
@@ -549,7 +590,7 @@ func main() {
 		os.Exit(0) // exit because we dealt with named files
 	}
 
-	if stdoutFlag {
+	if stdoutFlag && len(goodPaths) > 0 {
 		if !quietFlag {
 			fmt.Fprintln(os.Stderr, colour(brightRed, errors.New("files specified along with stdout").Error()))
 		}
@@ -578,21 +619,42 @@ func main() {
 				}
 				return
 			}
-			// Don't re-gzip but just send the gzipped data to stdout
-			if gzipped {
-				reader := bytes.NewReader(data)
-				io.CopyBuffer(os.Stdout, reader, data)
-				os.Exit(0)
-			}
-			compressedData, err := gZipData(data)
-			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, err.Error())
+			if decompress {
+				if !gzipped {
+					reader := bytes.NewReader(data)
+					io.CopyBuffer(os.Stdout, reader, data)
+					os.Exit(0)
 				}
-				return
+			} else {
+				// Don't re-gzip but just send the gzipped data to stdout
+				if gzipped {
+					reader := bytes.NewReader(data)
+					io.CopyBuffer(os.Stdout, reader, data)
+					os.Exit(0)
+				}
 			}
-			reader := bytes.NewReader(compressedData)
-			io.CopyBuffer(os.Stdout, reader, compressedData)
+
+			if decompress {
+				compressedData, err := gUnzipData(data)
+				if err != nil {
+					if !quietFlag {
+						fmt.Fprintln(os.Stderr, err.Error())
+					}
+					return
+				}
+				reader := bytes.NewReader(compressedData)
+				io.CopyBuffer(os.Stdout, reader, compressedData)
+			} else {
+				compressedData, err := gZipData(data)
+				if err != nil {
+					if !quietFlag {
+						fmt.Fprintln(os.Stderr, err.Error())
+					}
+					return
+				}
+				reader := bytes.NewReader(compressedData)
+				io.CopyBuffer(os.Stdout, reader, compressedData)
+			}
 			os.Exit(0)
 		}
 	}

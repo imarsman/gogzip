@@ -172,25 +172,37 @@ func gUnzipFromFile(in *os.File) (resData []byte, count int, err error) {
 		return resData, 0, fmt.Errorf("file not gzipped %s", in.Name())
 	}
 
-	// buf := new(bytes.Buffer)
-	// reader, _ := gzip.NewReader(buf)
-	gzipReader, err := gzip.NewReader(in)
-	defer gzipReader.Close()
-
-	// Find out if reading into a buffer then incrementally writing would work
-	data, err := ioutil.ReadAll(gzipReader)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		return resData, 0, err
-	}
-
-	buf := new(bytes.Buffer)
-	count, err = buf.Write(data)
+	br := bufio.NewReader(in)
+	compressedData, err := ioutil.ReadAll(br)
 	if err != nil {
 		return
 	}
 
-	resData = buf.Bytes()
+	// // buf := new(bytes.Buffer)
+	// // reader, _ := gzip.NewReader(buf)
+	// gzipReader, err := gzip.NewReader(in)
+	// defer gzipReader.Close()
+
+	// // Find out if reading into a buffer then incrementally writing would work
+	// data, err := ioutil.ReadAll(gzipReader)
+	// if err != nil {
+	// 	fmt.Fprintln(os.Stderr, err.Error())
+	// 	return resData, 0, err
+	// }
+
+	resData, err = gUnzipData(compressedData)
+	if err != nil {
+		return
+	}
+	count = len(resData)
+
+	// buf := new(bytes.Buffer)
+	// count, err = buf.Write(data)
+	// if err != nil {
+	// 	return
+	// }
+
+	// resData = buf.Bytes()
 
 	return
 }

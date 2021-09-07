@@ -1,7 +1,12 @@
 # gogzip
-An implementation of gzip in Go
+An implementation of gzip in Go.
 
-gzip was first publicly released in  31 October 1992.
+gzip was first publicly released in  31 October 1992. It was developed as part
+as free software under the GNU licence.
+
+The algorithm was written to allow for decompression while streaming. I have not
+been able to do streaming (buffered) compression. It may be possible but I have
+not yet found the answer to this issue.
 
 This is not finished. My goal with this is to improve my knowledge of i/o,
 readers, writers, files, and compression.
@@ -27,7 +32,7 @@ implement.
 * `gogzip -q <file1> <file2>` - quiet output (no complaints for invalid input)
 * `gogzip -L <file1> <file2>` - give summary information for listed files
 * `gogzip -t <file1> <file2>` - test file list integrity
-* `gogzip -f <file1> <file2>` - force overwrite etc. - implemented when file is
+* `gogzip -f <file1> <file2>` - force overwrite etc. - implemented when file
   would be overriden
 
 ## Notes

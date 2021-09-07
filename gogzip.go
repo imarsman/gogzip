@@ -310,9 +310,9 @@ func main() {
 	flag.BoolVar(&quietFlag, "q", false, "quiet output")
 
 	flag.BoolVar(&stdoutFlag, "c", false, "send to standard out")
-	flag.BoolVar(&stdoutFlag, "stdout", false, "send to standard out")
+	flag.BoolVar(&stdoutFlag, "stdout", false, "send to standard out (same as -c)")
 
-	flag.IntVar(&level, "l", 6, "compression level (0-9 with 0 being no compression)")
+	flag.IntVar(&level, "l", 6, "compression level (0-9 with 0=no compression)")
 
 	var test bool
 	flag.BoolVar(&test, "t", false, "test compressed file integrity")
@@ -323,7 +323,7 @@ func main() {
 	flag.BoolVar(&decompress, "d", false, "decompress input")
 	flag.BoolVar(&decompress, "decompress", false, "decompress input")
 
-	flag.BoolVar(&list, "L", false, "list compression information (not implemented yet)")
+	flag.BoolVar(&list, "L", false, "list compression information")
 
 	flag.Parse()
 

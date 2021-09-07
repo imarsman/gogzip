@@ -535,6 +535,7 @@ func main() {
 			fileToTransformToExists = true
 		}
 
+		// ask wheter user wishes to delete file - override with -f (force)
 		var askDelete = func(path string) bool {
 			// If force flag is true ask
 			// This logic does not yet work

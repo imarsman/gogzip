@@ -485,6 +485,14 @@ func main() {
 		// open the current file
 		inFile, err := openFile(path)
 		defer inFile.Close()
+
+		if err != nil {
+			if !quietFlag {
+				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			}
+			return
+		}
+
 		if err != nil {
 			if !quietFlag {
 				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
@@ -495,12 +503,6 @@ func main() {
 		// check if gzipped and skip if error or if gzipped
 		gzipped, err := isGzipped(inFile, true)
 		if decompress {
-			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-				}
-				return
-			}
 			if !gzipped {
 				if !quietFlag {
 					fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file not gzipped %s", path)))
@@ -508,12 +510,6 @@ func main() {
 				return
 			}
 		} else {
-			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-				}
-				return
-			}
 			if gzipped {
 				if !quietFlag {
 					fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file already gzipped %s", path)))
@@ -521,6 +517,7 @@ func main() {
 				return
 			}
 		}
+
 		// set gzipped name
 		var fileToWorkOn string = path
 		var fileToTransformTo string = fileToWorkOn + ".gz"
@@ -618,6 +615,7 @@ func main() {
 	}
 
 	// MacOS (BSD) gzip sends to stdout if there is stdin but GNU does not
+	// Here send to stdout still happens with no stdout flag and no paths
 	if !stdoutFlag && len(goodPaths) == 0 {
 		stdoutFlag = true
 	}
@@ -636,6 +634,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, colour(brightRed, errors.New("files specified along with stdout").Error()))
 		}
 		os.Exit(1)
+
 		// MacOS gzip will forward when stdin available and no -c flag set
 	} else if stdoutFlag || len(goodPaths) == 0 {
 
@@ -664,6 +663,7 @@ func main() {
 				if !gzipped {
 					reader := bytes.NewReader(data)
 					io.CopyBuffer(os.Stdout, reader, data)
+
 					os.Exit(0)
 				}
 			} else {
@@ -671,6 +671,7 @@ func main() {
 				if gzipped {
 					reader := bytes.NewReader(data)
 					io.CopyBuffer(os.Stdout, reader, data)
+
 					os.Exit(0)
 				}
 			}

@@ -530,13 +530,14 @@ func main() {
 		}
 
 		// If force flag is true ask
-		// if _, err := os.Stat(fileToWorkOn); err == nil {
+		// This logic does not yet work
+		// if _, err := os.Stat(fileToTransformTo); err == nil {
 		// 	if !forceFlag {
 		// 		reader := bufio.NewReader(os.Stdin)
 		// 		// get y/n - anything but yes will cause the action to be abandoned
 		// 		fmt.Print(colour(brightYellow, fmt.Sprintf(
 		// 			"%s already exists. Overwrite? (y/n) ",
-		// 			fileToWorkOn,
+		// 			fileToTransformTo,
 		// 		)))
 		// 		choice, _ := reader.ReadString('\n')
 		// 		choice = strings.ToLower(strings.TrimSpace(choice))

@@ -529,23 +529,27 @@ func main() {
 			fileToTransformTo = path[:len(path)-3]
 		}
 
-		// If force flag is true ask
-		// This logic does not yet work
-		// if _, err := os.Stat(fileToTransformTo); err == nil {
-		// 	if !forceFlag {
-		// 		reader := bufio.NewReader(os.Stdin)
-		// 		// get y/n - anything but yes will cause the action to be abandoned
-		// 		fmt.Print(colour(brightYellow, fmt.Sprintf(
-		// 			"%s already exists. Overwrite? (y/n) ",
-		// 			fileToTransformTo,
-		// 		)))
-		// 		choice, _ := reader.ReadString('\n')
-		// 		choice = strings.ToLower(strings.TrimSpace(choice))
-		// 		if choice != "y" {
-		// 			return
-		// 		}
-		// 	}
-		// }
+		var askDelete = func(path string) bool {
+			// If force flag is true ask
+			// This logic does not yet work
+			if _, err := os.Stat(path); err == nil {
+				if !forceFlag {
+					reader := bufio.NewReader(os.Stdin)
+					// get y/n - anything but yes will cause the action to be abandoned
+					fmt.Print(colour(brightYellow, fmt.Sprintf(
+						"%s already exists. Overwrite? (y/n) ",
+						path,
+					)))
+					choice, _ := reader.ReadString('\n')
+					choice = strings.ToLower(strings.TrimSpace(choice))
+					if choice != "y" {
+						return true
+					}
+					return false
+				}
+			}
+			return true
+		}
 
 		// open file and show error and skip if error
 		compressionFile, err := os.OpenFile(fileToTransformTo, os.O_CREATE|os.O_WRONLY, 0644)
@@ -566,6 +570,7 @@ func main() {
 			}
 			// If keep fla false remove start file
 			if !keepFlag {
+				// if askDelete(fileToWorkOn) {
 				err = os.Remove(fileToWorkOn)
 				if err != nil {
 					if !quietFlag {
@@ -573,6 +578,7 @@ func main() {
 					}
 					return
 				}
+				// }
 			}
 		} else {
 			// gzip output file from input file at level
@@ -585,6 +591,7 @@ func main() {
 			}
 			// If keep fla false remove start file
 			if !keepFlag {
+				// if askDelete(fileToTransformTo) {
 				err = os.Remove(fileToWorkOn)
 				if err != nil {
 					if !quietFlag {
@@ -592,6 +599,7 @@ func main() {
 					}
 					return
 				}
+				// }
 			}
 		}
 	}

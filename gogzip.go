@@ -529,6 +529,12 @@ func main() {
 			fileToTransformTo = path[:len(path)-3]
 		}
 
+		// before we open the file, is it there already?
+		var fileToTransformToExists = false
+		if _, err := os.Stat(fileToWorkOn); err == nil {
+			fileToTransformToExists = true
+		}
+
 		var askDelete = func(path string) bool {
 			// If force flag is true ask
 			// This logic does not yet work
@@ -551,6 +557,12 @@ func main() {
 			return true
 		}
 
+		// get approval if force flag false and file to transform exists
+		var approveDelete bool = true
+		if fileToTransformToExists && !forceFlag {
+			approveDelete = askDelete(fileToTransformTo)
+		}
+
 		// open file and show error and skip if error
 		compressionFile, err := os.OpenFile(fileToTransformTo, os.O_CREATE|os.O_WRONLY, 0644)
 		defer compressionFile.Close()
@@ -570,15 +582,15 @@ func main() {
 			}
 			// If keep fla false remove start file
 			if !keepFlag {
-				// if askDelete(fileToWorkOn) {
-				err = os.Remove(fileToWorkOn)
-				if err != nil {
-					if !quietFlag {
-						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+				if approveDelete || forceFlag {
+					err = os.Remove(fileToWorkOn)
+					if err != nil {
+						if !quietFlag {
+							fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+						}
+						return
 					}
-					return
 				}
-				// }
 			}
 		} else {
 			// gzip output file from input file at level
@@ -591,15 +603,15 @@ func main() {
 			}
 			// If keep fla false remove start file
 			if !keepFlag {
-				// if askDelete(fileToTransformTo) {
-				err = os.Remove(fileToWorkOn)
-				if err != nil {
-					if !quietFlag {
-						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+				if approveDelete || forceFlag {
+					err = os.Remove(fileToWorkOn)
+					if err != nil {
+						if !quietFlag {
+							fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+						}
+						return
 					}
-					return
 				}
-				// }
 			}
 		}
 	}

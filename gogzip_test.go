@@ -153,7 +153,7 @@ func TestGUzipToFile(t *testing.T) {
 }
 
 func TestEnd(t *testing.T) {
-	// is := is.New(t)
-	// err := cleanup()
-	// is.NoErr(err)
+	is := is.New(t)
+	err := cleanup()
+	is.NoErr(err)
 }

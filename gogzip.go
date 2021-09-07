@@ -522,28 +522,32 @@ func main() {
 			}
 		}
 		// set gzipped name
-		var gzipFName string = path + ".gz"
-		var noGzipFname = gzipFName[:len(gzipFName)-3]
-
-		var compressionFileName = gzipFName
+		var fileToWorkOn string = path
+		var fileToTransformTo string = fileToWorkOn + ".gz"
 		if decompress {
-			compressionFileName = noGzipFname
+			fileToWorkOn = path
+			fileToTransformTo = path[:len(path)-3]
 		}
 
 		// If force flag is true ask
-		if _, err := os.Stat(compressionFileName); err == nil {
-			if !forceFlag {
-				reader := bufio.NewReader(os.Stdin)
-				fmt.Print(fmt.Sprintf("File %s exists. Overwrite? (y/n)", compressionFileName))
-				choice, _ := reader.ReadString('\n')
-				if strings.ToLower(choice) == "n" {
-					return
-				}
-			}
-		}
+		// if _, err := os.Stat(fileToWorkOn); err == nil {
+		// 	if !forceFlag {
+		// 		reader := bufio.NewReader(os.Stdin)
+		// 		// get y/n - anything but yes will cause the action to be abandoned
+		// 		fmt.Print(colour(brightYellow, fmt.Sprintf(
+		// 			"%s already exists. Overwrite? (y/n) ",
+		// 			fileToWorkOn,
+		// 		)))
+		// 		choice, _ := reader.ReadString('\n')
+		// 		choice = strings.ToLower(strings.TrimSpace(choice))
+		// 		if choice != "y" {
+		// 			return
+		// 		}
+		// 	}
+		// }
 
 		// open file and show error and skip if error
-		compressionFile, err := os.OpenFile(compressionFileName, os.O_CREATE|os.O_WRONLY, 0644)
+		compressionFile, err := os.OpenFile(fileToTransformTo, os.O_CREATE|os.O_WRONLY, 0644)
 		defer compressionFile.Close()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
@@ -561,7 +565,7 @@ func main() {
 			}
 			// If keep fla false remove start file
 			if !keepFlag {
-				err = os.Remove(path)
+				err = os.Remove(fileToWorkOn)
 				if err != nil {
 					if !quietFlag {
 						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
@@ -580,7 +584,7 @@ func main() {
 			}
 			// If keep fla false remove start file
 			if !keepFlag {
-				err = os.Remove(path)
+				err = os.Remove(fileToWorkOn)
 				if err != nil {
 					if !quietFlag {
 						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))

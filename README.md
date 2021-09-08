@@ -78,4 +78,11 @@ user	0m0.943s
 sys	0m1.517s
 ```
 
+## Notes
+
+The argument parsing library used here does not deal with arguments such as -1,
+-2, -, etc. It may be that an argument will need to have a different identifier to
+work around this.
+
   -- Ian Marsman
+  

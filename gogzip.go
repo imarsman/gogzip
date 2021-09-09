@@ -134,14 +134,6 @@ func gZipFromFile(in *os.File, level int) (compressedData []byte, count int, err
 
 // read from file and write gzipped to output file
 func gZipToFile(in *os.File, out *os.File, level int) (count int, err error) {
-	// gzipped, err := isGzipped(in, true)
-	// if err != nil {
-	// 	return count, err
-	// }
-	// if gzipped == true {
-	// 	return count, fmt.Errorf("file already gzipped %s", in.Name())
-	// }
-
 	br := bufio.NewReader(in)
 
 	// Find out if reading into a buffer then incrementally writing would work

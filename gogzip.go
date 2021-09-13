@@ -98,11 +98,9 @@ func gZipData(data []byte) (compressedData []byte, err error) {
 	if err != nil {
 		return
 	}
-
 	if err = gzipWriter.Flush(); err != nil {
 		return
 	}
-
 	if err = gzipWriter.Close(); err != nil {
 		return
 	}

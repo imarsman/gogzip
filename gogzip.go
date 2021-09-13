@@ -119,7 +119,7 @@ func gZipFromFile(in *os.File, level int) (compressedData []byte, count int, err
 	// Find out if reading into a buffer then incrementally writing would work
 	data, err := ioutil.ReadAll(br)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		printError(err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func gZipToFile(in *os.File, out *os.File, level int) (count int, err error) {
 	// Find out if reading into a buffer then incrementally writing would work
 	data, err := ioutil.ReadAll(br)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		printError(err)
 		return 0, err
 	}
 
@@ -181,14 +181,6 @@ func gUnzipData(data []byte) (resData []byte, err error) {
 
 // read from file and gunzip to byte slice
 func gUnzipFromFile(in *os.File) (resData []byte, count int, err error) {
-	// gzipped, err := isGzipped(in, true)
-	// if err != nil {
-	// 	return []byte{}, 0, err
-	// }
-	// if gzipped == false {
-	// 	return resData, 0, fmt.Errorf("file not gzipped %s", in.Name())
-	// }
-
 	br := bufio.NewReader(in)
 	compressedData, err := ioutil.ReadAll(br)
 	if err != nil {
@@ -205,14 +197,6 @@ func gUnzipFromFile(in *os.File) (resData []byte, count int, err error) {
 }
 
 func gUnzipToFile(in *os.File, out *os.File) (count int, err error) {
-	// gzipped, err := isGzipped(in, true)
-	// if err != nil {
-	// 	return
-	// }
-	// if gzipped == false {
-	// 	return 0, fmt.Errorf("file not gzipped %s", in.Name())
-	// }
-
 	data, count, err := gUnzipFromFile(in)
 	if err != nil {
 		return
@@ -291,6 +275,14 @@ func printHelp(out *os.File) {
 	os.Exit(0)
 }
 
+func printError(err error) {
+	if !quietFlag {
+		fmt.Fprintln(os.Stderr, err.Error())
+	}
+}
+
+var quietFlag bool
+
 func main() {
 	var helpFlag bool
 	flag.BoolVar(&helpFlag, "h", false, "print usage")
@@ -298,7 +290,6 @@ func main() {
 	var forceFlag bool
 	flag.BoolVar(&forceFlag, "f", false, "force overwrite")
 
-	var quietFlag bool
 	flag.BoolVar(&quietFlag, "q", false, "quiet output")
 
 	flag.BoolVar(&stdoutFlag, "c", false, "send to standard out")
@@ -340,13 +331,13 @@ func main() {
 	for _, path := range paths {
 		var skip bool
 		if _, err := os.Stat(path); err != nil {
-			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			printError(err)
 			skip = true
 		} else if os.IsNotExist(err) {
-			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			printError(err)
 			skip = true
 		} else if err != nil {
-			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			printError(err)
 			skip = true
 		}
 		if skip {
@@ -361,12 +352,12 @@ func main() {
 		inFile, err := openFile(path)
 		defer inFile.Close()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			printError(err)
 			return
 		}
 		_, err = testGzipped(inFile, true)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			printError(err)
 			return
 		}
 	}
@@ -399,40 +390,29 @@ func main() {
 				inFile, err := openFile(path)
 				defer inFile.Close()
 				if err != nil {
-					if !quietFlag {
-						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-					}
+					printError(err)
 					continue
 				}
 
 				// check if gzipped and skip if error or if gzipped
 				gzipped, err := isGzipped(inFile, true)
 				if err != nil {
-					if !quietFlag {
-						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-					}
+					printError(err)
 					continue
 				}
 				if !gzipped {
-					// if !quietFlag {
-					// 	fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file not gzipped %s", path)))
-					// }
 					continue
 				}
 
 				s, err := os.Stat(path)
 				if err != nil {
-					if !quietFlag {
-						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-					}
+					printError(err)
 					return
 				}
 				compressedCount := s.Size()
 				_, uncompressedCount, err := gUnzipFromFile(inFile)
 				if err != nil {
-					if !quietFlag {
-						fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-					}
+					printError(err)
 					return
 				}
 				ratio := float64(compressedCount) / float64(uncompressedCount)
@@ -479,16 +459,12 @@ func main() {
 		defer inFile.Close()
 
 		if err != nil {
-			if !quietFlag {
-				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-			}
+			printError(err)
 			return
 		}
 
 		if err != nil {
-			if !quietFlag {
-				fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-			}
+			printError(err)
 			return
 		}
 
@@ -496,16 +472,12 @@ func main() {
 		gzipped, err := isGzipped(inFile, true)
 		if decompress {
 			if !gzipped {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file not gzipped %s", path)))
-				}
+				printError(err)
 				return
 			}
 		} else {
 			if gzipped {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, colour(brightRed, fmt.Sprintf("file already gzipped %s", path)))
-				}
+				printError(err)
 				return
 			}
 		}
@@ -557,7 +529,7 @@ func main() {
 		compressionFile, err := os.OpenFile(fileToTransformTo, os.O_CREATE|os.O_WRONLY, 0644)
 		defer compressionFile.Close()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
+			printError(err)
 			return
 		}
 
@@ -565,9 +537,7 @@ func main() {
 			// gzip output file from input file at level
 			_, err = gUnzipToFile(inFile, compressionFile)
 			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-				}
+				printError(err)
 				return
 			}
 			// If keep fla false remove start file
@@ -575,9 +545,7 @@ func main() {
 				if approveDelete || forceFlag {
 					err = os.Remove(fileToWorkOn)
 					if err != nil {
-						if !quietFlag {
-							fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-						}
+						printError(err)
 						return
 					}
 				}
@@ -586,9 +554,7 @@ func main() {
 			// gzip output file from input file at level
 			_, err = gZipToFile(inFile, compressionFile, level)
 			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-				}
+				printError(err)
 				return
 			}
 			// If keep fla false remove start file
@@ -596,9 +562,7 @@ func main() {
 				if approveDelete || forceFlag {
 					err = os.Remove(fileToWorkOn)
 					if err != nil {
-						if !quietFlag {
-							fmt.Fprintln(os.Stderr, colour(brightRed, err.Error()))
-						}
+						printError(err)
 						return
 					}
 				}
@@ -614,7 +578,6 @@ func main() {
 
 	// There are files to compress
 	if !stdoutFlag && len(goodPaths) > 0 {
-		// files := make([]*os.File, 0, len(paths))
 		for _, path := range goodPaths {
 			process(path)
 		}
@@ -638,17 +601,13 @@ func main() {
 			// Find out if reading into a buffer then incrementally writing would work
 			data, err := ioutil.ReadAll(br)
 			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, err.Error())
-				}
+				printError(err)
 				return
 			}
 
 			gzipped, err := isGzippedFromBytes(data)
 			if err != nil {
-				if !quietFlag {
-					fmt.Fprintln(os.Stderr, err.Error())
-				}
+				printError(err)
 				return
 			}
 			if decompress {
@@ -671,9 +630,7 @@ func main() {
 			if decompress {
 				compressedData, err := gUnzipData(data)
 				if err != nil {
-					if !quietFlag {
-						fmt.Fprintln(os.Stderr, err.Error())
-					}
+					printError(err)
 					return
 				}
 				reader := bytes.NewReader(compressedData)
@@ -681,9 +638,7 @@ func main() {
 			} else {
 				compressedData, err := gZipData(data)
 				if err != nil {
-					if !quietFlag {
-						fmt.Fprintln(os.Stderr, err.Error())
-					}
+					printError(err)
 					return
 				}
 				reader := bytes.NewReader(compressedData)

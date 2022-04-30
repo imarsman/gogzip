@@ -288,6 +288,7 @@ var quietFlag bool
 func main() {
 	cmd := &complete.Command{
 		Flags: map[string]complete.Predictor{
+			"path":       predict.Files("*"),
 			"force":      predict.Nothing,
 			"quiet":      predict.Nothing,
 			"stdout":     predict.Nothing,
@@ -295,6 +296,7 @@ func main() {
 			"test":       predict.Nothing,
 			"keep":       predict.Nothing,
 			"decompress": predict.Nothing,
+			"list":       predict.Nothing,
 		},
 	}
 

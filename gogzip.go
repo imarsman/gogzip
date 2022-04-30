@@ -10,9 +10,13 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/alexflint/go-arg"
 	"github.com/jwalton/gchalk"
+	"github.com/posener/complete/v2"
+	"github.com/posener/complete/v2/predict"
 )
 
 var useColour bool = true
@@ -282,31 +286,33 @@ func printError(err error) {
 var quietFlag bool
 
 func main() {
-	var helpFlag bool
-	flag.BoolVar(&helpFlag, "h", false, "print usage")
+	cmd := &complete.Command{
+		Flags: map[string]complete.Predictor{
+			"force":      predict.Nothing,
+			"quiet":      predict.Nothing,
+			"stdout":     predict.Nothing,
+			"level":      predict.Nothing,
+			"test":       predict.Nothing,
+			"keep":       predict.Nothing,
+			"decompress": predict.Nothing,
+		},
+	}
 
-	var forceFlag bool
-	flag.BoolVar(&forceFlag, "f", false, "force overwrite")
+	cmd.Complete("gogzip")
 
-	flag.BoolVar(&quietFlag, "q", false, "quiet output")
+	var args struct {
+		Path       []string `arg:"-p,--path" help:"path to file to act on"`
+		Force      bool     `arg:"-f,--force" help:"force overwrite"`
+		Quiet      bool     `arg:"-q,--quiet" help:"quiet output"`
+		Stdout     bool     `arg:"-c,--stdout" help:"send to standard out"`
+		Level      int      `arg:"-l,--level" default:"6" help:"compression level (0-9 with 0=no compression)"`
+		Test       bool     `arg:"-t,--test" help:"test compressed file integrity"`
+		Keep       bool     `arg:"-k,--keep" help:"keep original file"`
+		Decompress bool     `arg:"-d,--decompress" help:"decompress input"`
+		List       bool     `arg:"-L,--list" help:"list compression information"`
+	}
 
-	flag.BoolVar(&stdoutFlag, "c", false, "send to standard out")
-	flag.BoolVar(&stdoutFlag, "stdout", false, "send to standard out (same as -c)")
-
-	flag.IntVar(&level, "l", 6, "compression level (0-9 with 0=no compression)")
-
-	var test bool
-	flag.BoolVar(&test, "t", false, "test compressed file integrity")
-
-	var keepFlag bool
-	flag.BoolVar(&keepFlag, "k", false, "keep original file")
-
-	flag.BoolVar(&decompress, "d", false, "decompress input")
-	flag.BoolVar(&decompress, "decompress", false, "decompress input")
-
-	flag.BoolVar(&list, "L", false, "list compression information")
-
-	flag.Parse()
+	arg.MustParse(&args)
 
 	// override invalid level
 	if level < 0 || level > 9 {
@@ -318,30 +324,20 @@ func main() {
 		level = 6
 	}
 
-	paths := flag.Args()
+	var goodPaths = []string{}
 
-	if helpFlag {
-		printHelp(os.Stdout)
-	}
-
-	var goodPaths = make([]string, 0, len(paths))
-
-	for _, path := range paths {
-		var skip bool
-		if _, err := os.Stat(path); err != nil {
-			printError(err)
-			skip = true
-		} else if os.IsNotExist(err) {
-			printError(err)
-			skip = true
-		} else if err != nil {
-			printError(err)
-			skip = true
+	for _, p := range args.Path {
+		matches, err := filepath.Glob(p)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
 		}
-		if skip {
-			continue
+		base := filepath.Dir(p)
+
+		if len(matches) > 0 {
+			fmt.Println(filepath.Join(base, p))
+			goodPaths = append(goodPaths, filepath.Join(base, p))
 		}
-		goodPaths = append(goodPaths, path)
 	}
 
 	// Test a file at a path
@@ -361,7 +357,7 @@ func main() {
 	}
 
 	// Implement the -t flag to test all input files
-	if test {
+	if args.Test {
 		if len(goodPaths) > 0 {
 			for _, path := range goodPaths {
 				testFile(path)
@@ -499,7 +495,7 @@ func main() {
 			// If force flag is true ask
 			// This logic does not yet work
 			if _, err := os.Stat(path); err == nil {
-				if !forceFlag {
+				if !args.Force {
 					reader := bufio.NewReader(os.Stdin)
 					// get y/n - anything but yes will cause the action to be abandoned
 					fmt.Print(colour(brightYellow, fmt.Sprintf(
@@ -519,7 +515,7 @@ func main() {
 
 		// get approval if force flag false and file to transform exists
 		var approveDelete bool = true
-		if fileToTransformToExists && !forceFlag {
+		if fileToTransformToExists && !args.Force {
 			approveDelete = askDelete(fileToTransformTo)
 		}
 
@@ -539,8 +535,8 @@ func main() {
 				return
 			}
 			// If keep fla false remove start file
-			if !keepFlag {
-				if approveDelete || forceFlag {
+			if !args.Keep {
+				if approveDelete || args.Force {
 					err = os.Remove(fileToWorkOn)
 					if err != nil {
 						printError(err)
@@ -555,9 +551,9 @@ func main() {
 				printError(err)
 				return
 			}
-			// If keep fla false remove start file
-			if !keepFlag {
-				if approveDelete || forceFlag {
+			// If keep flag false remove start file
+			if !args.Keep {
+				if approveDelete || args.Force {
 					err = os.Remove(fileToWorkOn)
 					if err != nil {
 						printError(err)

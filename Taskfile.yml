@@ -1,0 +1,35 @@
+# https://taskfile.dev
+
+version: "3"
+
+vars:
+  targetbin: ~/bin
+  buildname: gogzip
+  # dir: >
+  #   {{.DIR}}
+
+tasks:
+  default:
+    cmds:
+      - echo "use 'task -l' to list tasks"
+    silent: true
+  install:
+    desc: copy build file to local bin
+    dir: .
+    preconditions:
+      - test -d {{.targetbin}}/
+    cmds:
+      - task: build
+      - cmd: rm {{.targetbin}}/{{.buildname}}
+        ignore_error: true
+      - cmd: cp ./build/{{.buildname}} {{.targetbin}}
+        ignore_error: true
+      - cmd: rm -f ./build/{{.buildname}}
+        ignore_error: true
+  build:
+    desc: build app
+    dir: .
+    cmds:
+      - cmd: rm -f ./build/{{.buildname}}
+        ignore_error: true
+      - go build -ldflags="{{.LDFLAGS}}" -o ./build/{{.buildname}} .
